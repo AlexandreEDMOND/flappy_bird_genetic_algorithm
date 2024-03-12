@@ -1,6 +1,8 @@
+from game import *
 
 def main():
-    print("Hello")
+    jeu = Game()
+    jeu.main_loop()
 
 
 if __name__ == "__main__":
