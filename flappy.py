@@ -1,4 +1,5 @@
 import pygame
+from network import *
 
 class Flappy:
 
@@ -9,6 +10,7 @@ class Flappy:
         self.speed = 0
         self.speed_decrease = 0.001
         self.speed_jump = 0.5
+        self.network = Network(5, 2)
     
     def get_rect(self):
         return pygame.Rect(self.x, self.y, self.width, self.width)
