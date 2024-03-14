@@ -1,9 +1,7 @@
-from game import *
+from genetic_algorithm import *
 
 def main():
-    jeu = Game(False, 100)
-    score_jeu = jeu.main_loop()
-    print(f"Score obtenue : {score_jeu}")
+    training_loop()
 
 
 if __name__ == "__main__":

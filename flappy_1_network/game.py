@@ -13,11 +13,13 @@ class Game:
         self.flappy = Flappy(150, 300)
         self.list_obstacles = []
         self.frame = 0
-        self.next_obstacle = 3000
-        self.time_between_obstacle = 5000
+        self.next_obstacle = 0
+        self.time_between_obstacle = 3000
         self.width_wall = 30
         self.width_center = 100
         self.affichage_pygame = affichage_pygame
+        self.data_collect = []
+        self.add_obstacle()
     
     def decision_network(self):
         tenser_entree = torch.tensor(self.get_info_network(), dtype=torch.float32)
@@ -45,8 +47,9 @@ class Game:
         # Hauteur flappy
         flappy_position = self.flappy.y
 
-        data_network = [dist_next_obstacle, diff_tuyau_top, diff_tuyau_down, flappy_speed, flappy_position]
-        #print(data_network)
+        data_network = [dist_next_obstacle/self.w, diff_tuyau_top/self.h, diff_tuyau_down/self.h, flappy_speed, flappy_position/self.h]
+        if self.frame % 100 == 0:
+            self.data_collect.append(data_network)
         return data_network
 
     def add_obstacle(self):
@@ -114,7 +117,7 @@ class Game:
                 self.screen.fill((50, 0, 0))
 
             #self.get_info_network()
-            if self.decision_network() == 1:
+            if self.decision_network() == 2:
                 self.flappy.make_jump()
             self.actualise_elements()
             self.delete_obstacle()

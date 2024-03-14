@@ -5,56 +5,46 @@ from random import randint
 
 class Game:
 
-    def __init__(self, affichage_pygame, list_flappy):
+    def __init__(self, affichage_pygame, path_network):
         self.w = 600
         self.h = 600
         if affichage_pygame:
             self.screen = pygame.display.set_mode((self.w, self.h))
-        self.list_flappy = list_flappy
+        self.flappy = Flappy(150, 300, path_network)
         self.list_obstacles = []
         self.frame = 0
         self.next_obstacle = 0
-        self.time_between_obstacle = 3000
+        self.time_between_obstacle = 5000
         self.width_wall = 30
         self.width_center = 100
         self.affichage_pygame = affichage_pygame
         self.add_obstacle()
     
-    def make_flappy_move(self):
-        for flappy in self.list_flappy:
-            if flappy.alive:
-                if self.decision_network(flappy) == 1:
-                    flappy.make_jump()
-
-    def decision_network(self, flappy):
-        tenser_entree = torch.tensor(self.get_info_network(flappy), dtype=torch.float32)
-        output = flappy.network(tenser_entree)
+    def decision_network(self):
+        tenser_entree = torch.tensor(self.get_info_network(), dtype=torch.float32)
+        output = self.flappy.network(tenser_entree)
         return output.argmax().item()
     
-    def get_info_network(self, flappy):
+    def get_info_network(self):
         
         dist_next_obstacle = 1
         diff_tuyau_top = 1
         diff_tuyau_down = 1
         for obstacle in self.list_obstacles:
             # Calcul distance jusqu'au prochain tuyau
-            distance = obstacle.x - flappy.x
+            distance = obstacle.x - self.flappy.x
 
             if distance > 0 and distance < dist_next_obstacle:
                 dist_next_obstacle = distance
                 # Calcul différence avec les tuyaux
-                diff_tuyau_top = flappy.y - obstacle.y + obstacle.width_center
-                diff_tuyau_down = obstacle.y + obstacle.width_center - flappy.y
+                diff_tuyau_top = self.flappy.y - obstacle.y + obstacle.width_center
+                diff_tuyau_down = obstacle.y + obstacle.width_center - self.flappy.y
 
         # Vitesse de flappy
-        flappy_speed = flappy.speed
+        flappy_speed = self.flappy.speed
 
         # Hauteur flappy
-        flappy_position = flappy.y
-
-        # On récompense le flappy si il est placé entre les 2 tuyaux
-        if diff_tuyau_down >= 0 and diff_tuyau_top >= 0:
-            flappy.score += 1
+        flappy_position = self.flappy.y
 
         data_network = [dist_next_obstacle/self.w, diff_tuyau_top/self.h, diff_tuyau_down/self.h, flappy_speed, flappy_position/self.h]
         #print(data_network)
@@ -71,42 +61,29 @@ class Game:
         
 
     def colision_elements(self):
-        for flappy in self.list_flappy:
-            #Si le flappy est vivant
-            if flappy.alive:
-                # Détection si le flappy touche le sol ou le haut
-                if flappy.y <= 0 or flappy.y >= self.h - flappy.width:
-                    # On tue le flappy
-                    flappy.alive = False
-                    #flappy.score += self.frame
-                
-                # Détection de colision entre floppy et les obstacles
-                for obstacle in self.list_obstacles:
-                    if pygame.Rect.colliderect(flappy.get_rect(), obstacle.get_rect_top()) == True or pygame.Rect.colliderect(flappy.get_rect(), obstacle.get_rect_down()) == True:
-                        # On tue le flappy
-                        flappy.alive = False
-                        #flappy.score += self.frame
-                        break
+        # Détection si le flappy touche le sol ou le haut
+        if self.flappy.y <= 0 or self.flappy.y >= self.h - self.flappy.width:
+            return 1
+        
+        # Détection de colision entre floppy et les obstacles
+        for obstacle in self.list_obstacles:
+            if pygame.Rect.colliderect(self.flappy.get_rect(), obstacle.get_rect_top()) == True:
+                return 1
+            if pygame.Rect.colliderect(self.flappy.get_rect(), obstacle.get_rect_down()) == True:
+                return 1
+            
+        return 0
 
     def affichage_elements(self):
+        pygame.draw.rect(self.screen, (200, 0, 0), self.flappy.get_rect())
 
-        # On affiche les flappy qui sont en vie
-        for flappy in self.list_flappy:
-            if flappy.alive:
-                pygame.draw.rect(self.screen, (200, 0, 0), flappy.get_rect())
-
-        # On affiche les obstacles
         for obstacle in self.list_obstacles:
             pygame.draw.rect(self.screen, (0, 200, 0), obstacle.get_rect_top())
             pygame.draw.rect(self.screen, (0, 200, 0), obstacle.get_rect_down())
 
     def actualise_elements(self):
-
-        # On fait bouger les flappy qui sont en vie
-        for flappy in self.list_flappy:
-            if flappy.alive:
-                flappy.decrease_speed()
-                flappy.actualise_position()
+        self.flappy.decrease_speed()
+        self.flappy.actualise_position()
 
         for obstacle in self.list_obstacles:
             obstacle.actualise_position()
@@ -115,14 +92,7 @@ class Game:
             self.add_obstacle()
 
     def calcul_score(self):
-        score = [flappy.score for flappy in self.list_flappy]
-        return score
-
-    def end_game(self):
-        for flappy in self.list_flappy:
-            if flappy.alive:
-                return False
-        return True
+        return self.frame
 
     def main_loop(self):
 
@@ -141,12 +111,11 @@ class Game:
                 self.screen.fill((50, 0, 0))
 
             #self.get_info_network()
-            self.make_flappy_move()
+            if self.decision_network() == 1:
+                self.flappy.make_jump()
             self.actualise_elements()
             self.delete_obstacle()
-            self.colision_elements()
-
-            if self.end_game():
+            if self.colision_elements() == 1:
                 running = False
 
             if self.affichage_pygame:
@@ -154,3 +123,6 @@ class Game:
 
                 pygame.display.flip()
             self.frame += 1
+        
+        score = self.calcul_score()
+        return score

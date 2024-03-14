@@ -1,10 +1,9 @@
 import pygame
 from network import *
-from random import randint
 
 class Flappy:
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, path_network):
         self.x = x
         self.y = y
         self.width = 20
@@ -12,15 +11,8 @@ class Flappy:
         self.speed_decrease = 0.001
         self.speed_jump = 0.5
         self.network = Network(5, 2)
-        self.alive = True
-        self.score = 0
-    
-    def reset(self):
-        self.x = 150
-        self.y = 300
-        self.speed = 0
-        self.alive = True
-        self.score = 0
+        self.network.load_state_dict(torch.load(path_network))
+        self.network.eval()
     
     def get_rect(self):
         return pygame.Rect(self.x, self.y, self.width, self.width)
